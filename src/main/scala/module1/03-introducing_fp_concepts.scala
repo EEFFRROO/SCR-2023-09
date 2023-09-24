@@ -182,6 +182,33 @@ object hof{
       case Some(v) => f(v)
       case None => None
     }
+
+    /**
+     *
+     * Реализовать метод printIfAny, который будет печатать значение, если оно есть
+     */
+    def printIfAny(): Unit = this match {
+      case Some(v) => println(v)
+      case None =>
+    }
+
+    /**
+     *
+     * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
+     */
+    def zip[B](b: Option[B]): Option[(T, B)] = (this, b) match {
+      case (Some(x), Some(y)) => Some((x, y))
+    }
+
+    /**
+     *
+     * Реализовать метод filter, который будет возвращать не пустой Option
+     * в случае если исходный не пуст и предикат от значения = true
+     */
+    def filter(f: T => Boolean): Any = this match {
+      case Some(v) if f(v) => Some(v)
+      case None =>
+    }
   }
   case class Some[T](v: T) extends Option[T]
   case object None extends Option[Nothing]
@@ -199,23 +226,6 @@ object hof{
   // Invariant - нет отношений
 
 
-  /**
-   *
-   * Реализовать метод printIfAny, который будет печатать значение, если оно есть
-   */
-
-
-  /**
-   *
-   * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
-   */
-
-
-  /**
-   *
-   * Реализовать метод filter, который будет возвращать не пустой Option
-   * в случае если исходный не пуст и предикат от значения = true
-   */
 
  }
 
@@ -244,37 +254,88 @@ object hof{
       def ::[TT >: T](el: TT): List[TT] = new ::(el, this)
 
 
+      /**
+       * Метод mkString возвращает строковое представление списка, с учетом переданного разделителя
+       *
+       */
+      def mkString(separator: String = ", "): String = {
+        @tailrec
+        def loop(list: List[T], result: String): String =
+          list match {
+            case ::(head, tail) if result == "" => loop(tail, head.toString)
+            case ::(head, tail) => loop(tail, result + separator + head)
+            case Nil => result
+          }
 
-
-
-     /**
-      * Метод mkString возвращает строковое представление списка, с учетом переданного разделителя
-      *
-      */
-
-     /**
-      * Конструктор, позволяющий создать список из N - го числа аргументов
-      * Для этого можно воспользоваться *
-      *
-      * Например вот этот метод принимает некую последовательность аргументов с типом Int и выводит их на печать
-      * def printArgs(args: Int*) = args.foreach(println(_))
-      */
+        loop(this, "")
+      }
 
      /**
       *
       * Реализовать метод reverse который позволит заменить порядок элементов в списке на противоположный
       */
+     def reverse(): List[T] = {
+       @tailrec
+       def loop(from: List[T], result: List[T]): List[T] =
+         from match {
+           case ::(head, tail) => loop(tail, result.::(head))
+           case Nil => result
+         }
+
+       loop(this, Nil)
+     }
 
      /**
       *
       * Реализовать метод map для списка который будет применять некую ф-цию к элементам данного списка
       */
+      def map[B](f: T => B): List[B] = {
+        @tailrec
+        def loop(list: List[T], result: List[B]): List[B] =
+          list match {
+            case ::(head, tail) => loop(tail, result.::(f(head)))
+            case Nil => result
+          }
+
+        loop(this, Nil).reverse()
+      }
 
 
      /**
       *
       * Реализовать метод filter для списка который будет фильтровать список по некому условию
       */
+      def filter(f: T => Boolean): List[T] = {
+       @tailrec
+       def loop(list: List[T], result: List[T]): List[T] =
+         list match {
+           case ::(head, tail) if f(head) => loop(tail, result.::(head))
+           case ::(_, tail) => loop(tail, result)
+           case Nil => result
+         }
+
+       loop(this, Nil).reverse()
+      }
+
+      def flatMap[B](f: T => List[B]): List[B] = {
+
+        @tailrec
+        def loop(list: List[T], result: List[B]): List[B] =
+          list match {
+            case ::(head, tail) =>
+              loop(tail, innerLoop(f(head), result))
+            case Nil => result
+          }
+
+        @tailrec
+        def innerLoop(list: List[B], result: List[B]): List[B] = list match {
+          case ::(head, tail) =>
+            innerLoop(tail, result.::(head))
+          case Nil => result
+        }
+
+        loop(this, Nil).reverse()
+      }
 
       def foldLeft = ???
 
@@ -303,6 +364,7 @@ object hof{
       * Написать функцию incList котрая будет принимать список Int и возвращать список,
       * где каждый элемент будет увеличен на 1
       */
+   def incList(l: List[Int]): List[Int] = l.map(item => item + 1)
 
 
     /**
@@ -310,5 +372,5 @@ object hof{
       * Написать функцию shoutString котрая будет принимать список String и возвращать список,
       * где к каждому элементу будет добавлен префикс в виде '!'
       */
-
+    def shoutString(l: List[String]): List[String] = l.map(item => "!" + item)
  }
