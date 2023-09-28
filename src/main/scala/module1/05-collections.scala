@@ -1,5 +1,7 @@
 package module1
 
+import scala.util.Random
+
 object coll{
 
   // создать список чисел
@@ -70,4 +72,25 @@ object coll{
   val result = numbers.filter(_ % 2 == 0).map(_ * 2).sum
 
 
+}
+
+class BallContainer {
+  private var balls: List[Int] = List.apply(0, 0, 0, 1, 1, 1)
+
+  def pullBall(): Boolean = {
+    this.balls = Random.shuffle(this.balls)
+    val head = this.balls.head
+    this.balls = this.balls.drop(1)
+    head == 1
+  }
+}
+
+class BallExperiment {
+  def run(count: Int): Double = {
+    val experiments = List.fill(count)(new BallContainer)
+    val whiteCount = experiments.count(e => {
+      e.pullBall() || e.pullBall()
+    })
+    whiteCount * 100 / count.toDouble
+  }
 }
