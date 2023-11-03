@@ -5,6 +5,7 @@ import cats.data.{Chain, Ior, Kleisli, NonEmptyChain, NonEmptyList, OptionT, Val
 import cats.implicits._
 
 import scala.concurrent.Future
+import scala.language.higherKinds
 import scala.util.Try
 
 object cats_type_classes{
@@ -209,6 +210,66 @@ object validation{
 
   // Решаем задачу
 
+}
+
+object homework6 {
+  trait Show[A] {
+    def show(x: A): String
+  }
+
+  object Show {
+    def apply[A](implicit ev: Show[A]): Show[A] = ev
+    def fromJvm[A]: Show[A] = (x: A) => x.toString
+    def fromFunction[A](f: A => String): Show[A] = (x: A) => f(x)
+
+    implicit val intShow: Show[Int] = fromJvm[Int]
+    implicit val stringShow: Show[String] = fromJvm[String]
+    implicit val booleanShow: Show[Boolean] = fromJvm[Boolean]
+
+    implicit def listShow[A]: Show[List[A]] = fromFunction[List[A]](list => list.mkString(", "))
+    implicit def setShow[A]: Show[Set[A]] = fromFunction[Set[A]](set => set.mkString(", "))
+
+    implicit class ShowSyntax[A](v: A) {
+      def show(implicit vs: Show[A]): String = vs.show(v)
+    }
+  }
+
+  trait Monad[F[_]] {
+
+    def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+    def flatten[A](fa: F[F[A]]): F[A] = flatMap(fa)(v => v)
+    def map[A, B](fa: F[A])(f: A => B): F[B]
+    def pure[A](a: A): F[A]
+  }
+
+  object Monad {
+    def apply[F[_]](implicit m: Monad[F]): Monad[F] = m
+
+    implicit def optionMonad: Monad[Option] = new Monad[Option] {
+      override def flatMap[A, B](fa: Option[A])(f: A => Option[B]): Option[B] = fa.flatMap(f)
+      override def map[A, B](fa: Option[A])(f: A => B): Option[B] = fa.map(f)
+      override def pure[A](a: A): Option[A] = Some(a)
+    }
+
+    implicit def listMonad: Monad[List] = new Monad[List] {
+      override def flatMap[A, B](fa: List[A])(f: A => List[B]): List[B] = fa.flatMap(f)
+      override def map[A, B](fa: List[A])(f: A => B): List[B] = fa.map(f)
+      override def pure[A](a: A): List[A] = List(a)
+    }
+
+    implicit def mapMonad: Monad[Set] = new Monad[Set] {
+      override def flatMap[A, B](fa: Set[A])(f: A => Set[B]): Set[B] = fa.flatMap(f)
+      override def map[A, B](fa: Set[A])(f: A => B): Set[B] = fa.map(f)
+      override def pure[A](a: A): Set[A] = Set(a)
+    }
+
+    implicit class MonadFlattenSyntax[F[_], A](v: F[F[A]]) {
+      def flatten(implicit m: Monad[F]): F[A] = m.flatten(v)
+    }
+    implicit class MonadFlatMapSyntax[F[_], A](v: F[A]) {
+      def flatMap[B]()(f: A => F[B])(implicit m: Monad[F]): F[B] = m.flatMap(v)(f)
+    }
+  }
 }
 
 
