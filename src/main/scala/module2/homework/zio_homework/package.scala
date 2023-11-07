@@ -1,10 +1,13 @@
 package module2.homework
 
+import module2.{effectConcurrency, zioConcurrency}
 import zio.{Has, Task, ULayer, ZIO, ZLayer}
 import zio.clock.{Clock, sleep}
 import zio.console._
 import zio.duration.durationInt
 import zio.macros.accessible
+
+//import scala.util.Random
 import zio.random._
 
 import java.io.IOException
@@ -21,14 +24,28 @@ package object zio_homework {
 
 
 
-  lazy val guessProgram = ???
+  lazy val guessProgram: Task[Unit] = {
+    def guessEffect(rand: Int): ZIO[Any, Throwable, Unit] = ZIO.effect(StdIn.readLine().toInt).flatMap(num => ZIO.effect(
+      if (num == rand) {
+        println("Угадано")
+      } else {
+        println(s"Не угадано. Загаданное число $rand")
+      }
+    ))
+    for {
+      randomized <- Random.Service.live.nextIntBetween(1, 4)
+      result <- ZIO.effect(println("Угадайте число от 1 до 3")) andThen guessEffect(randomized)
+    } yield result
+  }
 
   /**
    * 2. реализовать функцию doWhile (общего назначения), которая будет выполнять эффект до тех пор, пока его значение в условии не даст true
    * 
    */
 
-  def doWhile = ???
+  def doWhile[R, E, A](f: ZIO[R, E, A] => Boolean) = {
+
+  }
 
 
   /**
@@ -42,12 +59,15 @@ package object zio_homework {
    * 3.1 Создайте эффект, который будет возвращать случайеым образом выбранное число от 0 до 10 спустя 1 секунду
    * Используйте сервис zio Random
    */
-  lazy val eff = ???
+  lazy val eff = {
+    ZIO.sleep(zio.duration.Duration.fromMillis(1000))
+    Random.Service.live.nextIntBetween(0, 11)
+  }
 
   /**
    * 3.2 Создайте коллукцию из 10 выше описанных эффектов (eff)
    */
-  lazy val effects = ???
+  lazy val effects: ZIO[Any, Nothing, List[Int]] = ZIO.collectAll(List.fill(10)(eff))
 
   
   /**
@@ -56,7 +76,9 @@ package object zio_homework {
    * можно использовать ф-цию printEffectRunningTime, которую мы разработали на занятиях
    */
 
-  lazy val app = ???
+  lazy val app = {
+    zioConcurrency.printEffectRunningTime(effects)
+  }
 
 
   /**

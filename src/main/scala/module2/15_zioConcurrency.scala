@@ -8,6 +8,7 @@ import zio.internal.{Executor, ZIOSucceedNow}
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.MILLISECONDS
 import scala.language.postfixOps
 
 
@@ -25,7 +26,14 @@ object zioConcurrency {
    */
 
 
-  def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]): ZIO[Console with Clock with R, E, A] = ???
+  def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]): Task[Unit] = {
+    for {
+      startTime <- Clock.Service.live.currentTime(MILLISECONDS)
+      _ <- zio.map(x => x)
+      endTime <- Clock.Service.live.currentTime(MILLISECONDS)
+      zioEffect <- ZIO.effect(println(endTime - startTime))
+    } yield zioEffect
+  }
 
 
 
