@@ -1,7 +1,13 @@
 package module2.homework
 
 
-import scala.language.higherKinds
+import cats.Applicative.ops.toAllApplicativeOps
+import cats.effect.{ExitCode, IO, IOApp}
+import cats.implicits.catsSyntaxFlatMapOps
+
+import scala.io.StdIn
+import scala.language.{higherKinds, postfixOps}
+import scala.util.{Random => ScalaRandom}
 
 object catsEffectHomework{
 
@@ -29,13 +35,21 @@ object catsEffectHomework{
      *
      * @return Random[F]
      */
-    def apply = ???
+    def apply[F[_]](implicit ev: Random[F]): Random[F] = ev
 
 
     /**
      * 2. Реализовать инстанс тайп класса для IO
      */
-    implicit val ioRandom = ???
+    implicit val ioRandom = new Random[IO] {
+      /**   *
+       *
+       * @param min значение от (включительно)
+       * @param max значение до (исключается)
+       * @return псевдо случайное число в заданном диапазоне
+       */
+      override def nextIntBetween(min: Int, max: Int): IO[Int] = IO.delay(ScalaRandom.nextInt(max - min) + min)
+    }
   }
 
   /**
@@ -55,12 +69,16 @@ object catsEffectHomework{
      *
      * @return Console[F]
      */
-    def apply = ???
+    def apply[F[_]](implicit ev: Console[F]): Console[F] = ev
 
     /**
      * 4. Реализовать инстанс тайп класса для IO
      */
-    implicit val ioConsole = ???
+    implicit val ioConsole = new Console[IO] {
+      override def printLine(str: String): IO[Unit] = IO.delay(println(str))
+
+      override def readLine(): IO[String] = IO.delay(StdIn.readLine())
+    }
   }
 
   /**
@@ -70,7 +88,18 @@ object catsEffectHomework{
    * Подумайте, на какие наиболее простые эффекты ее можно декомпозировать.
    */
 
-    val guessProgram = ???
+  val guessProgram: IO[Boolean] = {
+    doWhile(
+      for {
+        randomized <- Random[IO].nextIntBetween(1, 4)
+        _ <- Console[IO].printLine("Угадайте число от 1 до 3")
+        result <- Console[IO].readLine()
+        isSuccessful <- IO.delay(randomized.toString == result)
+        _ <- IO.delay(if (isSuccessful) println("Угадано") else {
+          println("Не угадано")
+        })
+      } yield isSuccessful)((isSuccessful: Boolean) => isSuccessful)
+  }
 
 
 
@@ -79,14 +108,21 @@ object catsEffectHomework{
    * Подумайте над сигнатурой, еам нужно принимать эффект и условие относительно его значения, для того чтобы повторять либо заканчивать выполнение.
    */
 
-  def doWhile = ???
-
+  def doWhile[A](fa: IO[A])(f: A => Boolean): IO[A] =
+    for {
+      x <- fa
+      _ <- if (f(x)) IO.delay(x) else doWhile(fa)(f)
+    } yield x
 }
 
 /**
  * 7. Превратите данный объект в исполняемую cats effect программу, которая будет запускать
  * guessProgram
  */
-object HomeworkApp{
+object HomeworkApp extends IOApp {
 
+  import module2.homework.catsEffectHomework.guessProgram
+  override def run(args: List[String]): IO[ExitCode] = {
+      guessProgram.as(ExitCode.Success)
+  }
 }
